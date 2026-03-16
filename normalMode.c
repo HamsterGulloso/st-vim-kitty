@@ -112,10 +112,10 @@ ExitState executeMotion(char const cs, KeySym const *const ks) {
 	else if (ks && *ks == XK_h) overlay = !overlay;
 	else if (cs == 'K') historyMove(0, 0, -(int)state.m.c);
 	else if (cs == 'J') historyMove(0, 0,  (int)state.m.c);
-	else if (cs == 'k') historyMove(0, -(int)state.m.c, 0);
-	else if (cs == 'j') historyMove(0,  (int)state.m.c, 0);
-	else if (cs == 'h') historyMove(-(int)state.m.c, 0, 0);
-	else if (cs == 'l') historyMove( (int)state.m.c, 0, 0);
+	else if (cs == 'k' || (ks && *ks == XK_Up)) historyMove(0, -(int)state.m.c, 0);
+	else if (cs == 'j' || (ks && *ks == XK_Down)) historyMove(0,  (int)state.m.c, 0);
+	else if (cs == 'h' || (ks && *ks == XK_Left)) historyMove(-(int)state.m.c, 0, 0);
+	else if (cs == 'l' || (ks && *ks == XK_Right)) historyMove( (int)state.m.c, 0, 0);
 	else if (cs == 'H') term.c.y = 0;
 	else if (cs == 'M') term.c.y = term.bot / 2;
 	else if (cs == 'L') term.c.y = term.bot;
@@ -172,7 +172,7 @@ ExitState kPressHist(char const *cs, size_t len, int ctrl, KeySym const *kSym) {
 		if (len >= 1) decodeTo(cs, len, &searchStr);
 		applyPos(state.m.searchPos);
 		findString(state.m.search==fw ? 1 : -1, 1);
-	} else if (len == 0) { result = failed;
+	} else if (len == 0) { result = executeMotion(0, kSym);
 	} else if (quantifier) { state.m.c = min(SHRT_MAX, (int)state.m.c*10+cs[0]-48);
 	} else if (state.cmd.infix && state.cmd.op && (result = expandExpression(cs[0]), len=0)) {
     } else if (cs[0] == 'd') { state = defaultNormalMode; result = exitMotion; state.m.active = 1;
