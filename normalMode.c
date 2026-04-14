@@ -1,5 +1,7 @@
 #include <X11/keysym.h>
 #include <X11/XKBlib.h>
+#include <stdio.h>
+#include <threads.h>
 
 #include "normalMode.h"
 #include "utils.h"
@@ -124,7 +126,8 @@ ExitState executeMotion(char const cs, KeySym const *const ks) {
 		if (cs == 'G') term.c = c[0] = c[IS_SET(MODE_ALTSCREEN)+1];
 		if (!IS_SET(MODE_ALTSCREEN)) term.line = &buf[histOff=insertOff];
 	} else if (cs == '0') term.c.x = 0;
-	else if (cs == '$') term.c.x = term.col-1;
+	else if (cs == '$' || (ks && (*ks == XK_End || *ks == XK_KP_End))) term.c.x = term.col-1;
+	else if (ks && (*ks == XK_Home || *ks == XK_KP_Home)) term.c.x = 0;
 	else if (cs == 't') sel.type = sel.type==SEL_REGULAR ? SEL_RECTANGULAR : SEL_REGULAR;
 	else if (cs == 'n' || cs == 'N') {
 		int const d = ((cs=='N')!=(state.m.search==bw))?-1:1;
@@ -143,7 +146,19 @@ ExitState executeMotion(char const cs, KeySym const *const ks) {
 			// Terminate iteration: reset #it and old n value #on and decrease operation count:
 			if (found) it=-1, on=0, --state.m.c;
 		}
-	} else return failed;
+	} else if (cs == '^') {
+		int orig_x = term.c.x;
+		term.c.x = 0;
+		while (contains(cChar(), wDelL, strlen(wDelL)) && term.c.x <= term.col) {
+			if (term.c.x == term.col) {
+				term.c.x = orig_x;
+				return failed;
+			}
+			printf("cChar: %c\n", cChar());
+			term.c.x ++;
+		}
+	}
+	else return failed;
 	state.m.c = 0;
 	return state.cmd.op == yank ? exitMotion : success;
 }
