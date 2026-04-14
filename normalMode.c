@@ -149,12 +149,11 @@ ExitState executeMotion(char const cs, KeySym const *const ks) {
 	} else if (cs == '^') {
 		int orig_x = term.c.x;
 		term.c.x = 0;
-		while (contains(cChar(), wDelL, strlen(wDelL)) && term.c.x <= term.col) {
-			if (term.c.x == term.col) {
+		while (contains(cChar(), wDelL, strlen(wDelL)) && term.c.x <= term.col-1) {
+			if (term.c.x == term.col-1) {
 				term.c.x = orig_x;
 				return failed;
 			}
-			printf("cChar: %c\n", cChar());
 			term.c.x ++;
 		}
 	}
