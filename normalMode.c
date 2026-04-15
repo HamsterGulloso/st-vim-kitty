@@ -126,7 +126,6 @@ ExitState executeMotion(char const cs, KeySym const *const ks) {
 		if (cs == 'G') term.c = c[0] = c[IS_SET(MODE_ALTSCREEN)+1];
 		if (!IS_SET(MODE_ALTSCREEN)) term.line = &buf[histOff=insertOff];
 	} else if (cs == '0') term.c.x = 0;
-	else if (cs == '$' || (ks && (*ks == XK_End || *ks == XK_KP_End))) term.c.x = term.col-1;
 	else if (ks && (*ks == XK_Home || *ks == XK_KP_Home)) term.c.x = 0;
 	else if (cs == 't') sel.type = sel.type==SEL_REGULAR ? SEL_RECTANGULAR : SEL_REGULAR;
 	else if (cs == 'n' || cs == 'N') {
@@ -155,6 +154,16 @@ ExitState executeMotion(char const cs, KeySym const *const ks) {
 				return failed;
 			}
 			term.c.x ++;
+		}
+	} else if (cs == '$' || (ks && (*ks == XK_End || *ks == XK_KP_End))) {
+		int orig_x = term.c.x;
+		term.c.x = term.col-1;
+		while (contains(cChar(), wDelL, strlen(wDelL)) && term.c.x >= 0) {
+			if (term.c.x == 0) {
+				term.c.x = orig_x;
+				return failed;
+			}
+			term.c.x --;
 		}
 	}
 	else return failed;
