@@ -737,22 +737,24 @@ execsh(char *cmd, char **args)
 void
 sigchld(int a)
 {
-	int stat;
+	int stat, olderrno;
 	pid_t p;
 
-	if ((p = waitpid(-1, &stat, WNOHANG)) < 0)
-		die("waiting for pid %hd failed: %s\n", pid, strerror(errno));
+	olderrno = errno;
+	do {
+		p = waitpid(pid, &stat, WNOHANG);
+	} while (p < 0 && errno == EINTR);
+
+	if (p < 0)
+		_exit(1);
 
 	if (pid != p) {
-		/* reinstall sigchld handler */
-		signal(SIGCHLD, sigchld);
+		errno = olderrno;
 		return;
 	}
 
-	if (WIFEXITED(stat) && WEXITSTATUS(stat))
-		die("child exited with status %d\n", WEXITSTATUS(stat));
-	else if (WIFSIGNALED(stat))
-		die("child terminated due to signal %d\n", WTERMSIG(stat));
+	if ((WIFEXITED(stat) && WEXITSTATUS(stat)) || WIFSIGNALED(stat))
+		_exit(1);
 	_exit(0);
 }
 
@@ -1023,6 +1025,9 @@ tsetdirt(int top, int bot)
 {
 	int i;
 
+	if (term.row <= 0)
+		return;
+
 	LIMIT(top, 0, term.row-1);
 	LIMIT(bot, 0, term.row-1);
 
@@ -1273,8 +1278,10 @@ tsetchar(Rune u, const Glyph *attr, int x, int y)
 			term.line[y][x+1].mode &= ~ATTR_WDUMMY;
 		}
 	} else if (term.line[y][x].mode & ATTR_WDUMMY) {
-		term.line[y][x-1].u = ' ';
-		term.line[y][x-1].mode &= ~ATTR_WIDE;
+		if (x > 0) {
+			term.line[y][x-1].u = ' ';
+			term.line[y][x-1].mode &= ~ATTR_WIDE;
+		}
 	}
 
 	if (u == ' ' && term.line[y][x].mode & ATTR_IMAGE &&
@@ -2602,6 +2609,7 @@ eschandle(uchar ascii)
 		resettitle();
 		xloadcols();
 		xsetmode(0, MODE_HIDE);
+		xsetmode(0, MODE_BRCKTPASTE);
 		break;
 	case '=': /* DECPAM -- Application keypad */
 		xsetmode(1, MODE_APPKEYPAD);
@@ -2970,9 +2978,9 @@ draw(void)
 	/* adjust cursor position */
 	LIMIT(term.ocx, 0, term.col-1);
 	LIMIT(term.ocy, 0, term.row-1);
-	if (term.line[term.ocy][term.ocx].mode & ATTR_WDUMMY)
+	if (term.ocx > 0 && (term.line[term.ocy][term.ocx].mode & ATTR_WDUMMY))
 		term.ocx--;
-	if (term.line[term.c.y][cx].mode & ATTR_WDUMMY)
+	if (cx > 0 && (term.line[term.c.y][cx].mode & ATTR_WDUMMY))
 		cx--;
 
 	if (histMode) historyPreDraw();
