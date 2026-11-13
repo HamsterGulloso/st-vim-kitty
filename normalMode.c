@@ -165,6 +165,33 @@ ExitState executeMotion(char const cs, KeySym const *const ks) {
 			}
 			term.c.x --;
 		}
+	} else if (cs == '%') {
+		char cc = cChar();
+		int orig_x = term.c.x;
+		int direction = 0;
+		char search_char = 0;
+
+		if      (cc == '{') { direction = 1;  search_char = '}'; }
+		else if (cc == '}') { direction = -1; search_char = '{'; }
+		else if (cc == '[') { direction = 1;  search_char = ']'; }
+		else if (cc == ']') { direction = -1; search_char = '['; }
+		else if (cc == '(') { direction = 1;  search_char = ')'; }
+		else if (cc == ')') { direction = -1; search_char = '('; }
+		else return failed;
+
+		while (1) {
+			if (term.c.x >= term.col || term.c.x == 0) {
+				if (term.c.x == 0 && cChar() == search_char) {
+					break;
+				}
+				term.c.x = orig_x;
+				return failed;
+			}
+			if (cChar() == search_char) {
+				break;
+			}
+			term.c.x += direction;
+		}
 	}
 	else return failed;
 	state.m.c = 0;
